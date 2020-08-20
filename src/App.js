@@ -4,6 +4,9 @@ import MyComponent from './03/MyComponent';
 import PropsComponent from './03/PropsComponent';
 import ChildComponent from './03/ChildComponent';
 import BooleanComponent from './03/BooleanComponent';
+import ChildProperty from './03/ChildProperty';
+import StateExample from './03/StateExample';
+import Counter from './03/Counter';
 
 class App extends React.Component {
   render() {
@@ -27,6 +30,19 @@ class App extends React.Component {
         </div>
         <div>
           지루할 때: <BooleanComponent bored />
+        </div>
+        <div>
+          <ChildProperty>
+            <div>
+              <span>자식 노드</span>
+            </div>
+          </ChildProperty>
+        </div>
+        <div>
+          <StateExample />
+        </div>
+        <div>
+          <Counter />
         </div>
       </div>
     );
