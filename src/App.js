@@ -1,4 +1,4 @@
-import React, { useCallback, useReducer, useRef, useMemo } from 'react';
+import React, { useCallback, useReducer, useRef, useMemo, createContext } from 'react';
 import UserList from './UserList';
 import CreateUser from './CreateUser';
 import useInputsReducer from './useInputs';
@@ -33,14 +33,6 @@ const initialState = {
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'CHANGE_INPUT':
-      return {
-        ...state,
-        inputs: {
-          ...state.inputs,
-          [action.name]: action.value,
-        },
-      };
     case 'CREATE_USER':
       return {
         inputs: initialState.inputs,
@@ -63,6 +55,9 @@ function reducer(state, action) {
   }
 }
 
+// Dispatch를 관리하는 컨텍스트, 상태도 관리할 수 있음
+export const UserDispatch = createContext(null);
+
 function App() {
   const [{ username, email }, onChange, reset] = useInputsReducer({
     username: '',
@@ -84,28 +79,14 @@ function App() {
     nextId.current += 1;
   }, [username, email]);
 
-  const onToggle = useCallback((id) => {
-    dispatch({
-      type: 'TOGGLE_USER',
-      id,
-    });
-  }, []);
-
-  const onRemove = useCallback((id) => {
-    dispatch({
-      type: 'REMOVE_USER',
-      id,
-    });
-  }, []);
-
   const count = useMemo(() => countActiveUsers(users), [users]);
 
   return (
-    <>
+    <UserDispatch.Provider value={dispatch}>
       <CreateUser username={username} email={email} onChange={onChange} onCreate={onCreate} />
-      <UserList users={users} onToggle={onToggle} onRemove={onRemove} />
+      <UserList users={users} />
       <div>활성 사용자 수: 0</div>
-    </>
+    </UserDispatch.Provider>
   );
 }
 
