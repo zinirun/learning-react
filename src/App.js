@@ -1,36 +1,18 @@
-import React, { useRef, useState, useMemo, useCallback } from 'react';
+import React, { useCallback, useReducer, useRef, useMemo } from 'react';
 import UserList from './UserList';
 import CreateUser from './CreateUser';
 
-//useMemo: 특정 값이 바꼈을 때만 특정 함수를 실행 (재사용이 가능하게 해줌)
-//연산된 값을 재사용할 때
 function countActiveUsers(users) {
   console.log('활성 사용자 수를 세는 중...');
   return users.filter((user) => user.active).length;
 }
 
-function App() {
-  const [inputs, setInputs] = useState({
+const initialState = {
+  inputs: {
     username: '',
     email: '',
-  });
-
-  const { username, email } = inputs;
-
-  // useCallback: 특정 함수를 재사용할 때
-  // onChange 함수는 inputs가 바뀔때만 실행됨 -> 컴포넌트 리렌더링 성능 최적화
-  const onChange = useCallback(
-    (e) => {
-      const { name, value } = e.target;
-      setInputs({
-        ...inputs,
-        [name]: value,
-      });
-    },
-    [inputs],
-  );
-
-  const [users, setUsers] = useState([
+  },
+  users: [
     {
       id: 1,
       username: 'zini',
@@ -49,49 +31,89 @@ function App() {
       email: 'zini3@gmail.com',
       active: false,
     },
-  ]);
+  ],
+};
 
-  const nextId = useRef(4); // useState로 관리해도 되지만 리렌더링 필요없기때문에 굳이 안씀
+function reducer(state, action) {
+  switch (action.type) {
+    case 'CHANGE_INPUT':
+      return {
+        ...state,
+        inputs: {
+          ...state.inputs,
+          [action.name]: action.value,
+        },
+      };
+    case 'CREATE_USER':
+      return {
+        inputs: initialState.inputs,
+        users: state.users.concat(action.user),
+      };
+    case 'TOGGLE_USER':
+      return {
+        ...state,
+        users: state.users.map((user) =>
+          user.id === action.id ? { ...user, active: !user.active } : user,
+        ),
+      };
+    case 'REMOVE_USER':
+      return {
+        ...state,
+        users: state.users.filter((user) => user.id !== action.id),
+      };
+    default:
+      throw new Error('Unhandled action');
+  }
+}
+
+function App() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+  const nextId = useRef(4);
+  const { users } = state;
+  const { username, email } = state.inputs;
+
+  const onChange = useCallback((e) => {
+    const { name, value } = e.target;
+    dispatch({
+      type: 'CHANGE_INPUT',
+      name,
+      value,
+    });
+  }, []);
+
   const onCreate = useCallback(() => {
-    const user = {
-      id: nextId.current,
-      username,
-      email, // ...inputs 써도됨
-    };
-    setUsers((users) => [...users, user]); //기존거 복사하고 새로운거 추가 -> concat써도됨
-    //setUsers(users.concat(user));
-    setInputs({
-      username: '',
-      email: '',
+    dispatch({
+      type: 'CREATE_USER',
+      user: {
+        id: nextId.current,
+        username,
+        email,
+      },
     });
     nextId.current += 1;
   }, [username, email]);
 
-  // filter를 이용해 파라미터로 넘어온 id를 제외한 새로운 배열 생성해서 set
-  const onRemove = useCallback((id) => {
-    setUsers((users) => users.filter((user) => user.id !== id));
+  const onToggle = useCallback((id) => {
+    dispatch({
+      type: 'TOGGLE_USER',
+      id,
+    });
   }, []);
-  // setUsers에 users를 넣었으므로 컴포넌트가 처음 렌더링될때만 호출되고 그 뒤는 재사용됨
 
-  // 불변성을 지키면서 배열을 업데이트 -> map
-  // 파라미터 id만 active 값을 변경
-  const onToggle = useCallback(
-    (id) => {
-      setUsers((users) =>
-        users.map((user) => (user.id === id ? { ...user, active: !user.active } : user)),
-      );
-    },
-    [users],
-  );
+  const onRemove = useCallback((id) => {
+    dispatch({
+      type: 'REMOVE_USER',
+      id,
+    });
+  }, []);
 
-  //users에 변화가 일어났을 때만 호출됨 -> 최적화, 두번째 인자는 역시 뎁스
   const count = useMemo(() => countActiveUsers(users), [users]);
 
   return (
     <>
       <CreateUser username={username} email={email} onChange={onChange} onCreate={onCreate} />
-      <UserList users={users} onRemove={onRemove} onToggle={onToggle} />
-      <div>활성 사용자 수: {count}</div>
+      <UserList users={users} onToggle={onToggle} onRemove={onRemove} />
+      <div>활성 사용자 수: 0</div>
     </>
   );
 }
